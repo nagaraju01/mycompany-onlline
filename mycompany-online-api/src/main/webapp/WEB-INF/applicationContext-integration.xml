@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:aop="http://www.springframework.org/schema/aop" xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.2.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.1.xsd">
+
+    <!-- Just some basic configuration beans -->
+    <!-- Enable annotation-based Spring MVC controllers, for example @Controller, 
+    @Service, etc... -->
+    <mvc:annotation-driven validator="validator">
+        <mvc:argument-resolvers>
+            <bean class="com.mycompany.xyz.api.authentication.SecurityContextResolver" />
+        </mvc:argument-resolvers>
+        <mvc:message-converters>
+            <bean id="stringHttpMessageConverter"
+                              class="org.springframework.http.converter.StringHttpMessageConverter" />
+            <bean
+                class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
+                <property name="objectMapper">
+                    <bean
+                        class="org.springframework.http.converter.json.Jackson2ObjectMapperFactoryBean"
+                        p:defaultViewInclusion="true" />
+                </property>
+            </bean>
+        </mvc:message-converters>
+    </mvc:annotation-driven>
+
+    <aop:aspectj-autoproxy />
+
+    <!-- Classpath scanning of @Component, @Service, etc annotated class -->
+    <!-- This is quite uneffective way how to scan spring beans. We should defined 
+    only particular packages which should be scanned. -->
+    <context:component-scan base-package="com.mycompany" />
+
+    <bean id="messageSource"
+              class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+        <property name="basenames">
+            <list>
+                <value>classpath:properties/messages</value>
+                <value>classpath:properties/error</value>
+                <value>classpath:properties/warning</value>
+            </list>
+        </property>
+        <property name="defaultEncoding" value="UTF-8" />
+    </bean>
+
+    <bean id="configProperties"
+              class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="location" value="classpath:config.properties" />
+    </bean>
+
+    <bean id="dataSource"
+              class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="${db.driver}" />
+        <property name="url" value="${db.url}" />
+        <property name="username" value="${db.user}" />
+        <property name="password" value="${db.pass}" />
+    </bean>
+
+    <bean id="multipartResolver"
+              class="org.springframework.web.multipart.commons.CommonsMultipartResolver" />
+
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+        <property name="dataSource" ref="dataSource" />
+    </bean>
+
+    <bean id="validator"
+              class="org.springframework.validation.beanvalidation.LocalValidatorFactoryBean">
+        <property name="validationMessageSource" ref="messageSource" />
+    </bean>
+
+    <bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
+        <property name="host" value="smtp.mailgun.org" />
+        <property name="port" value="587" />
+        <property name="protocol" value="smtp" />
+        <property name="username" value="postmaster@rs8482.mailgun.org" />
+        <property name="password" value="8bbpg9uufmy8" />
+        <property name="javaMailProperties">
+            <props>
+                <prop key="mail.smtps.auth">true</prop>
+                <prop key="mail.smtp.ssl.enable">false</prop>
+                <prop key="mail.transport.protocol">smtp</prop>
+            </props>
+        </property>
+    </bean>
+
+    <task:annotation-driven executor="taskExecutor" />
+    <task:executor id="taskExecutor" pool-size="15"
+                       queue-capacity="150" />
+		
+    <mvc:interceptors>
+        <mvc:interceptor>
+            <mvc:mapping path="/api/**" />
+            <bean class="com.mycompany.xyz.api.authentication.ApiAuthenticationInterceptor" />
+        </mvc:interceptor>
+    </mvc:interceptors>
+
+</beans>
